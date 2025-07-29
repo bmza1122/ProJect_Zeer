@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard ตรวจสอบอุปกรณ์เครือข่าย</title>
+
+  <!-- ✅ ฟอนต์ภาษาไทยน่ารัก -->
+  <link href="https://fonts.googleapis.com/css2?family=Mali&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #eaf3fb;
+      --card: #ffffff;
+      --border: #d3e0ea;
+      --primary: #3f72af;
+      --online: #88c672;
+      --offline: #e57373;
+      --text: #333;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Mali', 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(90deg, #3f72af, #3463a6);
+      color: white;
+      text-align: center;
+      padding: 20px 0;
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'Mali', cursive;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-bottom: 3px solid #2a4d7c;
+    }
+
+    header .icon {
+      font-size: 30px;
+      animation: rotate 5s linear infinite;
+    }
+
+    .wrapper {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+      padding: 15px;
+      height: calc(100vh - 80px);
+      overflow-y: auto;
+    }
+
+    .group {
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .group h2 {
+      font-size: 18px;
+      margin-top: 0;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .device {
+      background-color: var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      transition: 0.2s ease;
+      font-weight: bold;
+    }
+
+    .device.online {
+      background-color: var(--online);
+      color: white;
+    }
+
+    .device.offline {
+      background-color: var(--offline);
+      color: white;
+    }
+
+    .latency {
+      font-size: 12px;
+      font-weight: normal;
+      color: #fffde7;
+      margin-top: 5px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 13px;
+      padding: 10px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="icon">📡</span>
+    Dashboard ตรวจสอบอุปกรณ์เครือข่าย
+  </header>
+
+  <div class="wrapper" id="dashboard"></div>
+
+  <footer>อัปเดตทุก 3 วินาที • เวลาโหลด: <span id="timestamp"></span></footer>
+
+  <script>
+  async function fetchData() {
+    try {
+      const response = await fetch('ping_api.php');
+
+      if (!response.ok) {
+        throw new Error('❌ โหลดข้อมูลไม่สำเร็จ (HTTP ' + response.status + ')');
+      }
+
+      const result = await response.json();
+
+      const dashboard = document.getElementById('dashboard');
+      const timestamp = document.getElementById('timestamp');
+      dashboard.innerHTML = '';
+
+      let hasData = false;
+
+      for (let floor in result) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+
+        const title = document.createElement('h2');
+        title.textContent = floor;
+        groupDiv.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'device-grid';
+
+        if (Array.isArray(result[floor])) {
+          result[floor].forEach(device => {
+            const div = document.createElement('div');
+            const isOnline = device.status === "online";
+
+            div.className = `device ${isOnline ? 'online' : 'offline'}`;
+            div.innerHTML = `
+              ${device.ip}
+              <div class="latency">${isOnline && device.latency_ms !== null ? device.latency_ms + ' ms' : 'Unresponsive'}</div>
+            `;
+
+            grid.appendChild(div);
+          });
+
+          groupDiv.appendChild(grid);
+          dashboard.appendChild(groupDiv);
+          hasData = true;
+        }
+      }
+
+      if (!hasData) {
+        dashboard.innerHTML = '<div style="padding:20px;text-align:center;">🚫 ไม่มีข้อมูลแสดงผล</div>';
+      }
+
+      timestamp.textContent = new Date().toLocaleTimeString();
+
+    } catch (error) {
+      console.error(error);
+      const dashboard = document.getElementById('dashboard');
+      dashboard.innerHTML = `<div style="padding:20px;color:red;text-align:center;">
+        ❌ เกิดข้อผิดพลาดในการโหลดข้อมูล:<br>${error.message}
+      </div>`;
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 3000);
+</script>
+
+</body>
+</html>
